@@ -39,11 +39,8 @@ class PrawStream:
         ''' Actually stream the data, perhaps this should be called by init'''
         #super().__init__(**kwargs)
         subreddit = self.reddit.subreddit(self.subreddit)
-        log.error(f"subreddit={subreddit}")
         the_stream = subreddit.stream.comments(skip_existing=True) if self.datatype=='comments' else subreddit.stream.submissions(skip_existing=True)
-        log.warning(f"the_stream={the_stream}")
         for data in the_stream:
-            print(data)
             self.listener.on_data(data)
 
 
