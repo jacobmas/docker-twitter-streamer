@@ -21,7 +21,9 @@ class PrawStream:
         producer = kwargs.pop("producer", StdoutProducer())
         filteron = kwargs.pop("filter", "#")  # TODO: determine schema next week
         self.datatype=kwargs.pop("type","submissions") # or comments
-        self.subreddit=kwargs.pop("subreddit")
+        self.subreddit=kwargs.pop("subreddit",None)
+        self.redditor=kwargs.pop("redditor",None)
+
         if self.datatype!='comments' and self.datatype!='submissions':
             raise RedditException("Only valid streams are comments, submissions")
         if self.subreddit=='all':
@@ -38,8 +40,17 @@ class PrawStream:
     def _stream(self):
         ''' Actually stream the data, perhaps this should be called by init'''
         #super().__init__(**kwargs)
-        subreddit = self.reddit.subreddit(self.subreddit)
-        the_stream = subreddit.stream.comments(skip_existing=True) if self.datatype=='comments' else subreddit.stream.submissions(skip_existing=True)
+        # stream username, filter on subreddit if both are set
+        reddit_stream=None
+        if self.redditor is not None:
+            log.error(f"self.redditor={self.redditor}")
+            reddit_stream=self.reddit.redditor(self.redditor)
+        elif self.subreddit is not None:
+            reddit_stream=self.reddit.subreddit(self.subreddit)
+        else:
+            raise RedditException("Must specify subreddit or username")
+        print(f"reddit_stream={reddit_stream}")
+        the_stream = reddit_stream.stream.comments(skip_existing=True) if self.datatype=='comments' else subreddit.stream.submissions(skip_existing=True)
         for data in the_stream:
             self.listener.on_data(data)
 

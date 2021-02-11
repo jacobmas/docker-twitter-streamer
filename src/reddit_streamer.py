@@ -54,11 +54,10 @@ def check_args(args):
 def get_args(incoming = None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--filter', action='append')
-    parser.add_argument('-k', '--consumer_key', default=os.environ.get("TWITTER_CONSUMER_KEY"))
-    parser.add_argument('-s', '--consumer_secret', default=os.environ.get("TWITTER_CONSUMER_SECRET"))
-    parser.add_argument('-a', '--access_token', default=os.environ.get("TWITTER_ACCESS_TOKEN"))
-    parser.add_argument('-t', '--access_token_secret', default=os.environ.get("TWITTER_ACCESS_TOKEN_SECRET"))
-    parser.add_argument('--subreddit',default='judaism')
+    parser.add_argument('--subreddit',default='wallstreetbets')
+    parser.add_argument('--redditor',default=None)#'AwayBed2714')
+
+    parser.add_argument('--type', default='comments')
     parser.add_argument('--file',default=None)
     args = parser.parse_args(incoming)
     args.producer = get_producer()
