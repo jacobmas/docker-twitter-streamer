@@ -9,6 +9,7 @@ from pyparsing import (
     Forward,
     alphas,
     alphanums,
+    Combine,
     Keyword,
     Regex, Optional,
     OneOrMore,
@@ -32,18 +33,26 @@ log_level = max(log_val, logging.DEBUG)
 logging.basicConfig(format=log_fmt, level=log_level)
 
 class TwitterSeachQuery:
-    def __init__(self,query_str):
+    def __init__(self,query_str,keyword_funcs):
+        """Create a Twitter-style (used in many other systems as well) search query
+         :param query_str: the query format string
+         :param keyword_funcs: a list of single-input functions named
+         """
         self.exprStack = []
         self.query_str=query_str
         self.bnf = None
+        self.keyword_func=keyword_funcs
         self.parsed_str=None
-        self.prev_state=None # used for parsing
         self.parseString()
 
-    def check_is(self):
-        pass
+
 
     def tokenize_text(self,input_str):
+        """tokenize the text being searched using non-word characters, hopefully non-word is extensive enough
+         to include - and such if not quoted strings will work for that
+        :param input_str: string to tokenize
+
+          """
         return re.split(r'\W+',input_str)
 
     def check_word(self,keyword,tokenized_text):
@@ -80,6 +89,9 @@ class TwitterSeachQuery:
 
     def parseString(self):
         """
+        Parse string.
+        Initial attempt at grammar, needs restructuring.
+
         ANDop  :: 'AND'
         ORop   :: 'OR'
         lpar :: '('
@@ -100,8 +112,8 @@ class TwitterSeachQuery:
             word = ~colon + ~ORop+ ~ANDop + Word(alphanums,min=1)
             keyword = ~colon + ~ORop + ~ANDop + Word(alphas,min=1)
             quoted = quotedString
-            hashtag = Literal('#')+Word(alphanums)
-            cashtag = Literal('$')+Word(alphanums)
+            hashtag = Combine(Literal('#')+Word(alphanums))
+            cashtag = Combine(Literal('$')+Word(alphanums))
             minus = Literal('-')
             lpar, rpar = map(Suppress, "()")
             expr = Forward()
@@ -119,9 +131,7 @@ class TwitterSeachQuery:
             )
             ).setParseAction(self.push_unary_minus)
 
-            # by defining exponentiation as "atom [ ^ factor ]..." instead of "atom [ ^ atom ]...", we get right-to-left
-            # exponents, instead of left-to-right that is, 2^3^2 = 2^(3^2), not (2^3)^2.
-
+            # AND is optional word1 word2 implicitly is word1 AND word2
             term = Forward()
             term <<= atom + (ORop + atom).setParseAction(self.push_first)[...]
             expr <<= term + (Optional(ANDop) + term).setParseAction(self.push_and)[...]
@@ -130,38 +140,29 @@ class TwitterSeachQuery:
 
 
     def evaluate_search(self,input_str):
+        """ Helper function that tokenizes the input string and then calls evaluate stack"""
+        return self._evaluate_stack(input_str,self.tokenize_text(input_str))
 
-        return self.evaluate_stack(input_str,self.tokenize_text(input_str))
-
-    def evaluate_stack(self,input_str,tok_input_str):
+    def _evaluate_stack(self,input_str,tok_input_str):
 
         op, num_args = self.exprStack.pop(), 0
         my_logger.warning(f"op={op},type={type(op)}")
         if op == "OR":
-            my_logger.warning(f"op=OR")
-            op2inp = self.exprStack[-1]
-            op2=self.evaluate_stack(input_str,tok_input_str)
-            op1inp = self.exprStack[-1]
-            op1=self.evaluate_stack(input_str,tok_input_str)
-            my_logger.warning(f"op1({op1inp})={op1} OR op2({op2inp})={op2}")
+            op2=self._evaluate_stack(input_str,tok_input_str)
+            op1=self._evaluate_stack(input_str,tok_input_str)
             return op1 or op2
         if op == "AND":
-            op2inp=self.exprStack[-1]
-            op2=self.evaluate_stack(input_str,tok_input_str)
-            op1inp = self.exprStack[-1]
-            op1=self.evaluate_stack(input_str,tok_input_str)
-            my_logger.warning(f"op1({op1inp})={op1} AND op2({op2inp})={op2}")
-
+            op2=self._evaluate_stack(input_str,tok_input_str)
+            op1=self._evaluate_stack(input_str,tok_input_str)
             return op1 and op2
         if 'quote' in op:
             my_logger.warning(f"quote={op}")
             return re.search(re.sub(r'[\'\"]+','',op['quote']),input_str,flags=re.I) is not None
-
         if 'keyword' in op and 'value' in op:
             my_logger.warning(f"keyword, op={op}")
             return self.check_keyword(op['keyword'],op['value'])
         elif op == 'unary -':
-            next_op=self.evaluate_stack(input_str,tok_input_str)
+            next_op=self._evaluate_stack(input_str,tok_input_str)
             return not next_op
         elif isinstance(op,str):
             my_logger.warning(f"str={op}")
@@ -169,7 +170,7 @@ class TwitterSeachQuery:
         else:
             my_logger.error(f"not list,op={op},type(op)={type(op)}")
             raise Exception("Should never get here should always have an op")
-        return self.evaluate_stack(tok_input_str)
+        return self._evaluate_stack(tok_input_str)
 
 
 if __name__ == "__main__":
@@ -181,13 +182,6 @@ if __name__ == "__main__":
         val = query.evaluate_search(input)
         print(f"query={query_str},input={input}, success={val==expected_val}")
 
-        #except ParseException as pe:
-        #    print(query_str, "failed parse:", str(pe))
-        #except Exception as e:
-        #    print(query_str, "failed eval:", str(e))
-
-        #else:
-        #    print("Success")
 
     #test("from:twitterdev OR is:reply", "fuck")
     test("'bob fred'", "ipad bob fred",True) # true
@@ -204,6 +198,8 @@ if __name__ == "__main__":
     test("-bob fred","fred",True)
     test("-bob fred","bob fred",False)
     test("-bob fred","bob",False)
+    test("#bob", "fred", True)
+    test("@bob", "fred", True)
 
 
 
