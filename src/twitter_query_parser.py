@@ -36,12 +36,13 @@ class TwitterSeachQuery:
     def __init__(self,query_str,keyword_funcs):
         """Create a Twitter-style (used in many other systems as well) search query
          :param query_str: the query format string
-         :param keyword_funcs: a list of single-input functions named
+         :param keyword_funcs: a list of single-input functions named, ideally
+         so one can do things like from:user in the search
          """
         self.exprStack = []
         self.query_str=query_str
         self.bnf = None
-        self.keyword_func=keyword_funcs
+        self.keyword_funcs=keyword_funcs
         self.parsed_str=None
         self.parseString()
 
@@ -139,21 +140,26 @@ class TwitterSeachQuery:
             self.parsed_str=self.bnf.parseString(self.query_str, parseAll=True)
 
 
-    def evaluate_search(self,input_str):
-        """ Helper function that tokenizes the input string and then calls evaluate stack"""
-        return self._evaluate_stack(input_str,self.tokenize_text(input_str))
+    def evaluate_search(self,input_str,data=None):
+        """ Helper function that tokenizes the input string and then calls evaluate stack
+        :param input_str: the input string to search on
+        :param data: metadata associated with the string, used for evaluation of
+        keyword functions like from:username since:time and the like, does not need to have a
+        specified format but must be compatible with the keyword functions given
+        """
+        return self._evaluate_stack(input_str,self.tokenize_text(input_str),data)
 
-    def _evaluate_stack(self,input_str,tok_input_str):
+    def _evaluate_stack(self,input_str,tok_input_str,data):
 
         op, num_args = self.exprStack.pop(), 0
         my_logger.warning(f"op={op},type={type(op)}")
         if op == "OR":
-            op2=self._evaluate_stack(input_str,tok_input_str)
-            op1=self._evaluate_stack(input_str,tok_input_str)
+            op2=self._evaluate_stack(input_str,tok_input_str,data)
+            op1=self._evaluate_stack(input_str,tok_input_str,data)
             return op1 or op2
         if op == "AND":
-            op2=self._evaluate_stack(input_str,tok_input_str)
-            op1=self._evaluate_stack(input_str,tok_input_str)
+            op2=self._evaluate_stack(input_str,tok_input_str,data)
+            op1=self._evaluate_stack(input_str,tok_input_str,data)
             return op1 and op2
         if 'quote' in op:
             my_logger.warning(f"quote={op}")
@@ -162,7 +168,7 @@ class TwitterSeachQuery:
             my_logger.warning(f"keyword, op={op}")
             return self.check_keyword(op['keyword'],op['value'])
         elif op == 'unary -':
-            next_op=self._evaluate_stack(input_str,tok_input_str)
+            next_op=self._evaluate_stack(input_str,tok_input_str,data)
             return not next_op
         elif isinstance(op,str):
             my_logger.warning(f"str={op}")
@@ -170,7 +176,7 @@ class TwitterSeachQuery:
         else:
             my_logger.error(f"not list,op={op},type(op)={type(op)}")
             raise Exception("Should never get here should always have an op")
-        return self._evaluate_stack(tok_input_str)
+        return self._evaluate_stack(tok_input_str,data)
 
 
 if __name__ == "__main__":

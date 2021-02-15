@@ -4,6 +4,7 @@ import sys
 import logging
 
 from tweepy import Stream, StreamListener, OAuthHandler
+from kinesis_producer import StdoutProducer
 
 log = logging.getLogger(__name__)
 
@@ -43,8 +44,3 @@ class TweepyStreamListener(StreamListener):
     def on_error(self, status):
         print("Error: " + str(status))
 
-class StdoutProducer(object):
-
-    def send(self, topic, data):
-        print(f"{topic}: {data}\n")
-        return True

@@ -16,7 +16,7 @@ from praw_stream import PrawStream
 logging.basicConfig(stream=sys.stdout, level=logging.ERROR)
 log = logging.getLogger(__name__)
 
-def get_producer():
+def get_producer(args):
     if os.getenv("KAFKA_SERVICE_HOST", False):
         from kafka_producer import KafkaProducer
         return KafkaProducer()
@@ -25,10 +25,18 @@ def get_producer():
         return KafkaProducer()
     elif os.getenv("KINESIS_STREAM_NAME", False):
         api_name = os.environ.get("KINESIS_API_NAME", 'firehose')
-        region_name = os.environ.get("KINESIS_REGION", 'us-east-1')
+        region_name = os.environ.get("KINESIS_REGION", 'us-west-2')
         stream_name = os.environ.get("KINESIS_STREAM_NAME", 'TwitterStream')
         from kinesis_producer import KinesisProducer
         return KinesisProducer(api_name, region_name, stream_name)
+    elif args.kinesis_stream_name is not None:
+        # fails if not all are set
+        api_name = args.kinesis_api_name
+        region_name = args.kinesis_region
+        stream_name = args.kinesis_stream_name
+        from kinesis_producer import KinesisProducer
+        return KinesisProducer(api_name, region_name, stream_name)
+
     else:
         from praw_stream import StdoutProducer
         return StdoutProducer()
@@ -58,9 +66,14 @@ def get_args(incoming = None):
     parser.add_argument('--redditor',default=None)#'AwayBed2714')
 
     parser.add_argument('--type', default='comments')
-    parser.add_argument('--file',default=None)
+    parser.add_argument('--file',default=None, help='ConfigParser .ini file containing reddit credentials')
+    parser.add_argument('--kinesis-api-name','--api',default='firehose')
+    parser.add_argument('--kinesis-region','--region',default='us-west-2')
+    parser.add_argument('--kinesis-stream-name', '--stream',default=None)
+
     args = parser.parse_args(incoming)
-    args.producer = get_producer()
+    args.producer = get_producer(args)
+    print(f"args.producer={args.producer}")
     result=vars(args)
     print(result)
     if args.file is not None:

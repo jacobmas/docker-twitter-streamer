@@ -32,6 +32,7 @@ class KinesisProducer(object):
         self.accumulator = RecordAccumulator()
 
     def send(self, topic, data):
+        print(f"data={data},type={type(data)}")
         self.accumulator.append({
             "Data": data.encode('utf-8'),
         })
@@ -42,3 +43,9 @@ class KinesisProducer(object):
             )
         else:
             return True
+
+class StdoutProducer(object):
+
+    def send(self, topic, data):
+        print(f"{topic}: {data}\n")
+        return True
