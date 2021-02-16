@@ -54,6 +54,7 @@ class SocialStream:
         """ Parse a config file for credentials"""
         config = configparser.ConfigParser(interpolation=None)
         config.read(args.file)
+        args.site=args.site.lower()
         for key in config[args.site]:
             print(f"key={key}, config[{args.site}][key]={config[args.site][key]}")
             setattr(args,key,config[args.site][key])
@@ -66,9 +67,9 @@ class SocialStream:
                 args.filter = [twitter_api_filter]
             else:
                 args.filter = ['#']
-        if args.site not in self.site_list:
+        if args.site.lower() not in self.site_list:
             raise Exception(f"Invalid site selected, valid sites are {self.site_list}")
-        if args.site=='twitter':
+        if args.site.lower()=='twitter':
             if not args.consumer_key:
                 raise Exception("Missing twitter api consumer key")
             if not args.consumer_secret:
@@ -77,7 +78,7 @@ class SocialStream:
                 raise Exception("Missing twitter api access token")
             if not args.access_token_secret:
                 raise Exception("Missing twitter api access token secret")
-        if args.site=='reddit':
+        if args.site.lower()=='reddit':
             if not args.username:
                 raise Exception("Missing reddit username")
             if not args.password:
@@ -95,20 +96,24 @@ class SocialStream:
 
     def get_args(self,incoming = None):
         parser = argparse.ArgumentParser()
-        parser.add_argument('-f', '--filter', action='append')
-        parser.add_argument('--site',default='twitter')
-        parser.add_argument('--subreddit',default='wallstreetbets')
-        parser.add_argument('--username',default=None)#'AwayBed2714')
+        parser.add_argument('-f', '--filter', action='append',help="Currently non-functional filter for stream")
+        parser.add_argument('--site',default='twitter',help="site to stream")
+        parser.add_argument('--subreddit',default='wallstreetbets',help='Subreddit to stream (reddit only)')
+        parser.add_argument('--username',default=None,help='Username to stream (reddit only?)')#'AwayBed2714')
 
-        parser.add_argument('--type', default='comments')
-        parser.add_argument('--file',default=None, help='ConfigParser .ini file containing credentials')
+        parser.add_argument('--type', default='comments',help="type of stream (Reddit only), i.e. comments or submissions for reddit")
+        parser.add_argument('--file',default=None, help='ConfigParser .ini file containing credentials for website (twitter, reddit, etc)')
         parser.add_argument('--kinesis-api-name','--api',default='firehose')
         parser.add_argument('--kinesis-region','--region',default='us-west-2')
         parser.add_argument('--kinesis-stream-name', '--stream',default=os.environ.get("KINESIS_STREAM_NAME"))
-        parser.add_argument('-k', '--consumer-key', default=os.environ.get("TWITTER_CONSUMER_KEY"))
-        parser.add_argument('-s', '--consumer-secret', default=os.environ.get("TWITTER_CONSUMER_SECRET"))
-        parser.add_argument('-a', '--access-token', default=os.environ.get("TWITTER_ACCESS_TOKEN"))
-        parser.add_argument('-t', '--access-token-secret', default=os.environ.get("TWITTER_ACCESS_TOKEN_SECRET"))
+        parser.add_argument('-k', '--consumer-key', default=os.environ.get("TWITTER_CONSUMER_KEY"),
+                            help="Twitter consumer key")
+        parser.add_argument('-s', '--consumer-secret', default=os.environ.get("TWITTER_CONSUMER_SECRET"),
+                            help="Twitter consumer secret")
+        parser.add_argument('-a', '--access-token', default=os.environ.get("TWITTER_ACCESS_TOKEN"),
+                            help="Twitter access token")
+        parser.add_argument('-t', '--access-token-secret', default=os.environ.get("TWITTER_ACCESS_TOKEN_SECRET"),
+                            help="Twitter access token secret")
 
         args = parser.parse_args(incoming)
         args.producer = self.get_producer(args)

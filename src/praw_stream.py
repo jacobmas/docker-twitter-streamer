@@ -2,7 +2,8 @@
 import os
 import sys
 import logging
-
+import json
+from json import JSONEncoder
 import praw
 from kinesis_producer import StdoutProducer
 
@@ -14,6 +15,17 @@ class RedditException(Exception):
     def __init__(self, message):
         self.message = message
 
+class PRAWJSONEncoder(JSONEncoder):
+    """Class to encode PRAW objects to JSON."""
+    def default(self, obj):
+        if isinstance(obj, praw.models.base.PRAWBase):
+            obj_dict = {}
+            for key, value in obj.__dict__.items():
+                if not key.startswith('_'):
+                    obj_dict[key] = value
+            return obj_dict
+        else:
+            return JSONEncoder.default(self, obj)
 
 
 class PrawStream:
@@ -67,7 +79,9 @@ class PrawStreamListener:
 
 
     def on_data(self, data):
-        self.producer.send(self.topic, data)
+        result=self.producer.send(self.topic, json.dumps(data, cls=PRAWJSONEncoder))
+        print(f"result of send ={result}")
+
         return True
 
     def on_error(self, status):

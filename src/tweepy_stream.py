@@ -38,7 +38,8 @@ class TweepyStreamListener(StreamListener):
         self.topic = topic
 
     def on_data(self, data):
-        self.producer.send(self.topic, data)
+        result=self.producer.send(self.topic, data)
+        print(f"result of send ={result}")
         return True
 
     def on_error(self, status):

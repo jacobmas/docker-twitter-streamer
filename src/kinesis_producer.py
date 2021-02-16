@@ -32,7 +32,7 @@ class KinesisProducer(object):
         self.accumulator = RecordAccumulator()
 
     def send(self, topic, data):
-        print(f"data={data},type={type(data)}")
+       # print(f"data={data},type={type(data)}")
         self.accumulator.append({
             "Data": data.encode('utf-8'),
         })
