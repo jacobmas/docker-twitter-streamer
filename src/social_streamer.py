@@ -114,6 +114,16 @@ class SocialStream:
                             help="Twitter access token")
         parser.add_argument('-t', '--access-token-secret', default=os.environ.get("TWITTER_ACCESS_TOKEN_SECRET"),
                             help="Twitter access token secret")
+        parser.add_argument('--username', default=os.environ.get("REDDIT_USERNAME"),
+                            help="Reddit username")
+        parser.add_argument('--password', default=os.environ.get("REDDIT_PASSWORD"),
+                            help="Twitter access token secret")
+        parser.add_argument('--user-agent', default=os.environ.get("REDDIT_USER_AGENT"),
+                            help="Twitter access token secret")
+        parser.add_argument('--client-id', default=os.environ.get("REDDIT_CLIENT_ID"),
+                            help="Twitter access token secret")
+        parser.add_argument('--client-secret', default=os.environ.get("REDDIT_CLIENT_SECRET"),
+                            help="Twitter access token secret")
 
         args = parser.parse_args(incoming)
         args.producer = self.get_producer(args)
