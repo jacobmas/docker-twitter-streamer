@@ -99,7 +99,7 @@ class SocialStream:
         parser.add_argument('-f', '--filter', action='append',help="Currently non-functional filter for stream")
         parser.add_argument('--site',default='twitter',help="site to stream")
         parser.add_argument('--subreddit',default='wallstreetbets',help='Subreddit to stream (reddit only)')
-        parser.add_argument('--username',default=None,help='Username to stream (reddit only?)')#'AwayBed2714')
+        parser.add_argument('--redditor',default=None,help='Redditor to stream (reddit only?)')#'AwayBed2714')
 
         parser.add_argument('--type', default='comments',help="type of stream (Reddit only), i.e. comments or submissions for reddit")
         parser.add_argument('--file',default=None, help='ConfigParser .ini file containing credentials for website (twitter, reddit, etc)')
