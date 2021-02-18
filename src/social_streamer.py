@@ -133,4 +133,8 @@ class SocialStream:
         return self.check_args(args)
 
 if __name__ == "__main__":
-    stream=SocialStream(sys.argv[1:])
+    while True:
+        try:
+            stream=SocialStream(sys.argv[1:])
+        except Exception as e:
+            log.error(f"Error with social stream, will attempt to recover gracefully {e}")
