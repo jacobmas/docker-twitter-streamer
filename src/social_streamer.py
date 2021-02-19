@@ -7,6 +7,8 @@ import sys
 import logging
 import argparse
 import configparser
+import time
+from traceback import print_tb
 
 # include path
 sys.path.append(os.path.join(os.path.dirname(__file__)))
@@ -31,7 +33,8 @@ class SocialStream:
         if self.result['site']=='twitter':
             self.stream = TweepyStream(**self.result).filter(track=self.result['filter'])
         if self.result['site']=='reddit':
-            self.stream = PrawStream(**self.result).filter(track=self.result['filter'])
+            # No built-in filter function for PrawStream
+            self.stream = PrawStream(**self.result)#.filter(track=self.result['filter'])
     def get_producer(self,args):
         if os.getenv("KINESIS_STREAM_NAME", False):
             api_name = os.environ.get("KINESIS_API_NAME", 'firehose')
@@ -137,4 +140,6 @@ if __name__ == "__main__":
         try:
             stream=SocialStream(sys.argv[1:])
         except Exception as e:
-            log.error(f"Error with social stream, will attempt to recover gracefully {e}")
+            log.error(f"Error with social stream, will attempt to recover gracefully {e},"+
+                      f"{print_tb(sys.exc_info()[2])}")
+            time.sleep(2)

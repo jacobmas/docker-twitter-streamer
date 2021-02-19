@@ -7,6 +7,8 @@ from json import JSONEncoder
 import praw
 from kinesis_producer import StdoutProducer
 
+from twitter_query_parser import TwitterSeachQuery
+
 log = logging.getLogger(__name__)
 
 class RedditException(Exception):
@@ -32,7 +34,7 @@ class PrawStream:
 
     def __init__(self, **kwargs):
         producer = kwargs.pop("producer", StdoutProducer())
-        filteron = kwargs.pop("filter", "#")  # TODO: determine schema next week
+        filteron = kwargs.pop("filter", "")  # TODO: determine schema next week
         self.datatype=kwargs.pop("type","submissions") # or comments
         self.subreddit=kwargs.pop("subreddit",None)
         self.redditor=kwargs.pop("redditor",None)
@@ -73,15 +75,17 @@ class PrawStreamListener:
 
     def __init__(self, producer, topic, datatype,subreddit):
         self.producer = producer
-        self.topic = topic
+        self.topic = " AND ".join(topic)
+        #print(f"topic={self.topic}")
+        self.query_obj = TwitterSeachQuery(self.topic) if topic else None
         self.datatype = datatype
         self.subreddit=subreddit
 
 
     def on_data(self, data):
-        result=self.producer.send(self.topic, json.dumps(data, cls=PRAWJSONEncoder))
-        print(f"result of send ={result}")
-
+        if self.query_obj is None or self.query_obj.evaluate_search(data.body):
+            result=self.producer.send(self.topic, json.dumps(data, cls=PRAWJSONEncoder))
+            print(f"result of send ={result}")
         return True
 
     def on_error(self, status):

@@ -21,6 +21,7 @@ from pyparsing import (
     QuotedString
 )
 from functools import reduce
+from copy import copy, deepcopy
 import math
 import operator
 import re
@@ -33,13 +34,14 @@ log_level = max(log_val, logging.DEBUG)
 logging.basicConfig(format=log_fmt, level=log_level)
 
 class TwitterSeachQuery:
-    def __init__(self,query_str,keyword_funcs):
+    def __init__(self,query_str,keyword_funcs=None):
         """Create a Twitter-style (used in many other systems as well) search query
          :param query_str: the query format string
          :param keyword_funcs: a list of single-input functions named, ideally
          so one can do things like from:user in the search
          """
         self.exprStack = []
+        self.evalStack=[]
         self.query_str=query_str
         self.bnf = None
         self.keyword_funcs=keyword_funcs
@@ -147,15 +149,18 @@ class TwitterSeachQuery:
         keyword functions like from:username since:time and the like, does not need to have a
         specified format but must be compatible with the keyword functions given
         """
+        self.evalStack=copy(self.exprStack)
         return self._evaluate_stack(input_str,self.tokenize_text(input_str),data)
 
     def _evaluate_stack(self,input_str,tok_input_str,data):
 
-        op, num_args = self.exprStack.pop(), 0
+        op, num_args = self.evalStack.pop(), 0
         my_logger.warning(f"op={op},type={type(op)}")
         if op == "OR":
             op2=self._evaluate_stack(input_str,tok_input_str,data)
+            my_logger.warning(f"op2={op2}")
             op1=self._evaluate_stack(input_str,tok_input_str,data)
+            my_logger.warning(f"op1={op1}")
             return op1 or op2
         if op == "AND":
             op2=self._evaluate_stack(input_str,tok_input_str,data)
@@ -176,6 +181,7 @@ class TwitterSeachQuery:
         else:
             my_logger.error(f"not list,op={op},type(op)={type(op)}")
             raise Exception("Should never get here should always have an op")
+
         return self._evaluate_stack(tok_input_str,data)
 
 
@@ -190,6 +196,7 @@ if __name__ == "__main__":
 
 
     #test("from:twitterdev OR is:reply", "fuck")
+    test("the OR and","asdfklasdf asdfjklasdf the",True)
     test("'bob fred'", "ipad bob fred",True) # true
     test("'bob fred'", "ipad bob and fred",False) # false
     test("bob fred", "ipad bob and fred",True) #true
@@ -205,7 +212,7 @@ if __name__ == "__main__":
     test("-bob fred","bob fred",False)
     test("-bob fred","bob",False)
     test("#bob", "fred", True)
-    test("@bob", "fred", True)
+  #  test("@bob", "fred", True)
 
 
 
